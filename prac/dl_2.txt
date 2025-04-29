@@ -1,0 +1,234 @@
+# This Python 3 environment comes with many helpful analytics libraries installed
+# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
+# For example, here's several helpful packages to load
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
+# Input data files are available in the read-only "../input/" directory
+# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
+
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+
+# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using "Save & Run All" 
+# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session
+
+
+
+
+
+
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Flatten, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+
+
+
+
+
+
+
+import warnings
+warnings.filterwarnings('ignore')
+print("TensorFlow Version:", tf.__version__)
+
+
+
+
+
+# --- 2. Parameters ---
+vocab_size = 10000  # Keep the top 10,000 most frequent words
+maxlen = 250        # Pad/truncate reviews to this length
+embedding_dim = 16
+dense_units = 16
+epochs = 10
+batch_size = 512
+
+
+
+
+
+
+print("\n--- Loading IMDB dataset ---")
+(x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=vocab_size)
+print(f"Training sequences: {len(x_train)}, Test sequences: {len(x_test)}")
+print(f"Training labels: {len(y_train)}, Test labels: {len(y_test)}")
+
+
+
+
+
+print("\n--- Exploratory Data Analysis ---")
+print("Sample review (sequence of word indices):")
+print(x_train[0][:20], "...") # Show first 20 indices of the first review
+print("Label for first review:", y_train[0], "(0: Negative, 1: Positive)")
+
+# 4.2 Label Distribution
+print("\nLabel Distribution:")
+labels, counts = np.unique(y_train, return_counts=True)
+print(f"Train set: Label 0: {counts[0]}, Label 1: {counts[1]}")
+labels_test, counts_test = np.unique(y_test, return_counts=True)
+print(f"Test set:  Label 0: {counts_test[0]}, Label 1: {counts_test[1]}")
+
+
+
+
+
+plt.figure(figsize=(8, 4))
+sns.countplot(x=y_train)
+plt.title('Training Label Distribution (0: Negative, 1: Positive)')
+plt.xlabel('Sentiment Label')
+plt.ylabel('Count')
+plt.show()
+
+
+
+
+
+print("\nReview Length Analysis:\n\n")
+train_lengths = [len(seq) for seq in x_train]
+test_lengths = [len(seq) for seq in x_test]
+
+plt.figure(figsize=(12, 5))
+
+plt.subplot(1, 2, 1)
+plt.hist(train_lengths, bins=50, color='skyblue')
+plt.title('Training Review Lengths Distribution')
+plt.xlabel('Review Length (Number of words)')
+plt.ylabel('Frequency')
+plt.axvline(np.mean(train_lengths), color='r', linestyle='dashed', linewidth=1, label=f'Mean: {np.mean(train_lengths):.0f}')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.hist(test_lengths, bins=50, color='salmon')
+plt.title('Test Review Lengths Distribution')
+plt.xlabel('Review Length (Number of words)')
+plt.ylabel('Frequency')
+plt.axvline(np.mean(test_lengths), color='r', linestyle='dashed', linewidth=1, label=f'Mean: {np.mean(test_lengths):.0f}')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+
+print(f"Average training review length: {np.mean(train_lengths):.2f} words")
+print(f"Average test review length: {np.mean(test_lengths):.2f} words")
+print(f"Max training review length: {np.max(train_lengths)} words")
+print(f"Max test review length: {np.max(test_lengths)} words")
+
+
+
+
+word_index = imdb.get_word_index()
+reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
+# Note: Indices are offset by 3 because 0 (padding), 1 (start), 2 (unknown) are reserved.
+def decode_review(text_indices):
+    return ' '.join([reverse_word_index.get(i - 3, '?') for i in text_indices])
+
+
+
+print("\nDecoded first training review:\n\n")
+print(decode_review(x_train[0]))
+
+
+
+print(f"\n--- Preprocessing Data (Padding sequences to maxlen={maxlen}) ---")
+x_train_pad = pad_sequences(x_train, maxlen=maxlen, padding='post', truncating='post')
+x_test_pad = pad_sequences(x_test, maxlen=maxlen, padding='post', truncating='post')
+
+print("Shape of padded training data:", x_train_pad.shape)
+print("Shape of padded test data:", x_test_pad.shape)
+print("Example of padded sequence (first review):")
+print(x_train_pad[0])
+
+
+
+
+print("\n--- Building the DNN Model ---")
+model = Sequential([
+    Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=maxlen),
+    Flatten(), # Flattens the 3D tensor (batch_size, maxlen, embedding_dim) to 2D (batch_size, maxlen * embedding_dim)
+    Dense(dense_units, activation='relu'),
+    Dense(1, activation='sigmoid') # Output layer for binary classification
+])
+
+
+
+
+
+model.compile(optimizer=Adam(learning_rate=0.001),
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+model.summary()
+
+
+
+
+print("\n--- Training the Model ---")
+history = model.fit(x_train_pad,
+                    y_train,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    validation_data=(x_test_pad, y_test),
+                    verbose=1) 
+
+
+
+
+
+
+print("\n--- Evaluating the Model ---")
+loss, accuracy = model.evaluate(x_test_pad, y_test, verbose=0)
+print(f"Test Loss: {loss:.4f}")
+print(f"Test Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+
+
+
+
+
+print("\n--- Visualizing Training History ---")
+history_dict = history.history
+
+
+acc = history_dict['accuracy']
+val_acc = history_dict['val_accuracy']
+loss_values = history_dict['loss']
+val_loss_values = history_dict['val_loss']
+
+epochs_range = range(1, epochs + 1)
+
+plt.figure(figsize=(12, 5))
+
+# Plot Training & Validation Accuracy
+plt.subplot(1, 2, 1)
+plt.plot(epochs_range, acc, 'bo-', label='Training Accuracy')
+plt.plot(epochs_range, val_acc, 'ro-', label='Validation Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.grid(True)
+
+# Plot Training & Validation Loss
+plt.subplot(1, 2, 2)
+plt.plot(epochs_range, loss_values, 'bo-', label='Training Loss')
+plt.plot(epochs_range, val_loss_values, 'ro-', label='Validation Loss')
+plt.title('Training and Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
