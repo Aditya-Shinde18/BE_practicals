@@ -1,0 +1,218 @@
+1. Import Libraries
+python
+Copy
+Edit
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.datasets import fashion_mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Flatten, Dense
+
+
+numpy (np) → Used for numerical operations (like finding max value).
+
+matplotlib.pyplot (plt) → Used for plotting images (showing the clothing image).
+
+tensorflow (tf) → Main library for building and training the neural network.
+
+fashion_mnist → Preloaded dataset inside TensorFlow containing images of fashion clothes (like T-shirts, shoes, etc.).
+
+Sequential → Simple way to stack layers one after another.
+
+Flatten, Dense → Layers used to design the model.
+
+
+
+2. Load and Prepare the Dataset
+python
+Copy
+Edit
+(X_train, y_train), (X_test, y_test) = fashion_mnist.load_data()
+Loads the Fashion MNIST dataset.
+
+
+
+X_train, y_train → Training images and their labels.
+
+X_test, y_test → Testing images and their labels.
+
+
+
+python
+Copy
+Edit
+X_train = X_train / 255.0
+X_test = X_test / 255.0
+
+
+
+Normalize the pixel values from range [0, 255] → [0, 1] to make training faster and better.
+
+
+
+3. Build the Neural Network
+python
+Copy
+Edit
+model = Sequential()
+Start building a model where layers are added one after the other.
+
+python
+Copy
+Edit
+model.add(Flatten(input_shape=(28,28)))
+Converts each 28×28 image into a 1D array (28×28 = 784 values).
+
+
+
+Flattening is necessary before feeding into Dense layers.
+
+Warning appears: It says a better way is to use Input(shape=(28,28)) instead of passing input_shape inside Flatten. But your code still works.
+
+
+
+
+python
+Copy
+Edit
+model.add(Dense(128, activation='relu'))
+Adds a hidden layer with 128 neurons.
+
+activation='relu' → Helps model learn complex patterns (ReLU = Rectified Linear Unit).
+
+
+
+python
+Copy
+Edit
+model.add(Dense(10, activation='softmax'))
+Output layer with 10 neurons (one for each clothing category).
+
+softmax activation → Converts outputs into probabilities that sum to 1.
+
+
+
+
+4. Compile the Model
+python
+Copy
+Edit
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+
+
+optimizer='adam' → Smart optimizer that adjusts learning rate.
+
+loss='sparse_categorical_crossentropy' → Loss function for multi-class classification (labels are integers, not one-hot).
+
+metrics=['accuracy'] → Track how often the prediction is correct.
+
+
+
+
+5. Train the Model
+python
+Copy
+Edit
+model.fit(X_train, y_train, epochs=20, batch_size=32, validation_split=0.1)
+Train the model for 20 full passes over the training data (epochs=20).
+
+
+batch_size=32 → 32 images at a time before updating model.
+
+validation_split=0.1 → 10% of training data used for validation (to monitor overfitting).
+
+
+
+
+During training:
+
+accuracy = how well it fits the training data.
+
+val_accuracy = how well it fits unseen (validation) data.
+
+
+
+
+6. Evaluate the Model
+python
+Copy
+Edit
+test_loss, test_acc = model.evaluate(X_test, y_test)
+print(f"Test Accuracy: {test_acc*100:.2f}%")
+
+
+Evaluate how good the model performs on real test data it never saw before.
+
+Prints final accuracy (in percentage).
+
+In your case, Test Accuracy: 88.64%.
+
+
+
+7. Make a Prediction on a Single Image
+python
+Copy
+Edit
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+               'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+List of class names corresponding to the 10 categories.
+
+python
+Copy
+Edit
+index = int(input("Enter the index of the image to predict: "))
+Ask the user for an index number (like 15) to pick a test image.
+
+python
+Copy
+Edit
+img = X_test[index]
+Pick the image from the test set at that index.
+
+python
+Copy
+Edit
+img_reshaped = img.reshape(1, 28, 28)
+Reshape the image because the model expects input in shape (batch_size, height, width).
+
+python
+Copy
+Edit
+prediction = model.predict(img_reshaped)
+Model predicts class probabilities for the image.
+
+python
+Copy
+Edit
+predicted_class_index = np.argmax(prediction)
+Find which class has the highest probability.
+
+python
+Copy
+Edit
+predicted_class_name = class_names[predicted_class_index]
+Get the class name corresponding to the predicted index.
+
+python
+Copy
+Edit
+true_class_name = class_names[y_test[index]]
+Get the actual (true) label of the image for comparison.
+
+
+8. Plot the Image and Show the Prediction
+python
+Copy
+Edit
+plt.imshow(img, cmap='gray')
+plt.title(f"Predicted: {predicted_class_name}\nActual: {true_class_name}")
+plt.axis('off')
+plt.show()
+Show the selected image.
+
+Display predicted label and actual label as title.
+
