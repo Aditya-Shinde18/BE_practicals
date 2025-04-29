@@ -1,0 +1,124 @@
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import *
+import matplotlib.pyplot as plt
+
+
+
+
+# Load the OCR letter recognition dataset
+url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data'
+dataset = pd.read_csv(url, header=None)
+
+
+
+
+# Split the dataset into features and labels
+X = dataset.iloc[:, 1:].values  #selecting all rows and selecting all columns from index 1
+y = dataset.iloc[:, 0].values   #selecting all rows and selecting column with index 0
+
+
+
+
+print(y[0])
+
+
+
+
+#splitting dataset into training and testing
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
+
+
+
+X_train = X_train / 15.0
+X_test = X_test / 15.0
+
+
+
+
+#we are using sequential model where layers are stacked one after another,
+#output of previous layer is given to as input to next layer
+
+model = Sequential()
+#1st layer is dense layer which consists on 128 neurons, since it is 1st layer we need to define input_shape of our training data
+model.add(Dense(128, activation='relu', input_shape=(16,)))
+model.add(Dropout(0.5))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(26, activation='softmax'))  #softmax is used to predict multiclass category outcome
+
+
+
+
+
+#now we will compile the model
+
+#sparse_categorical_crossentropy (scce) produces a category index of the most likely matching category.
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics =['accuracy'])
+
+
+
+
+#The batch size is a number of samples processed before the model is updated.
+#verbose is the choice that how you want to see the output of your Nural Network while it's training.
+#If you set verbose = 0, It will show nothing
+history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=50, batch_size=12, verbose=1)
+
+
+
+
+loss, accuracy = model.evaluate(X_test, y_test)
+print("Test accuracy:", accuracy)
+print("Test loss:", loss)
+
+
+
+
+
+model.save('ocr_model.h5')
+# Save the trained model
+
+
+
+
+from tensorflow.keras.models import load_model
+model = load_model('ocr_model.h5')
+# Load the trained model
+
+
+
+
+sample_records = X_test[:1000]
+# Select a few records for classification
+
+
+
+
+# Perform classification
+predictions = model.predict(sample_records)
+
+
+
+
+predicted_labels = np.argmax(predictions, axis=1)
+predicted_letters = label_encoder.inverse_transform(predicted_labels)
+actual_letters = label_encoder.inverse_transform(y_test)
+
+
+
+
+# Calculate accuracy
+accuracy = np.sum(predicted_labels == y[:1000]) / len(predicted_labels)
+
+
+
+# Print the predicted labels and corresponding actual labels
+print("Predicted Labels\tActual Labels")
+for i in range(len(predicted_letters)):
+    print(f"{predicted_letters[i]}\t\t\t{actual_letters[i]}")
+
+

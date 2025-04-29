@@ -1,0 +1,288 @@
+# import libraries
+import pandas as pd # Import Pandas for data manipulation using dataframes
+import numpy as np # Import Numpy for data statistical analysis
+import matplotlib.pyplot as plt # Import matplotlib for data visualisation
+import seaborn as sns
+import random
+
+%matplotlib inline
+sns.set_style("whitegrid")
+
+
+
+
+
+# dataframes creation for both training and testing datasets
+fashion_train_df = pd.read_csv('fashion-mnist_train.csv',sep=',')
+fashion_test_df = pd.read_csv('fashion-mnist_test.csv', sep = ',')
+
+
+
+
+
+fashion_train_df.head()
+
+
+
+
+fashion_train_df.tail()
+
+
+
+
+fashion_test_df.head()
+
+
+
+fashion_test_df.tail()
+
+
+
+fashion_train_df.shape
+
+
+
+
+# Create training and testing arrays
+train = np.array(fashion_train_df, dtype='float32')
+test = np.array(fashion_test_df, dtype='float32')
+
+
+
+
+train.shape
+
+
+
+
+train
+
+
+
+
+test
+
+
+
+
+class_names = ['T_shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+               'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+# Let's view some images!
+i = random.randint(1,6000) # select any random index from 1 to 60,000
+plt.imshow(train[i,1:].reshape((28,28))) # reshape and plot the image
+
+plt.imshow(train[i,1:].reshape((28,28)) , cmap = 'gray') # reshape and plot the image
+label_index = fashion_train_df["label"][i]
+plt.title(f"{class_names[label_index]}")
+
+
+# Remember the 10 classes decoding is as follows:
+# 0 => T-shirt/top
+# 1 => Trouser
+# 2 => Pullover
+# 3 => Dress
+# 4 => Coat
+# 5 => Sandal
+# 6 => Shirt
+# 7 => Sneaker
+# 8 => Bag
+# 9 => Ankle boot
+
+
+
+
+
+label = train[i,0]
+label
+
+
+
+W_grid = 15
+L_grid = 15
+
+fig, axes = plt.subplots(L_grid, W_grid, figsize=(17,17))
+
+axes = axes.ravel() # flaten the 15 x 15 matrix into 225 array
+
+n_train = len(train) # get the length of the train dataset
+
+# Select a random number from 0 to n_train
+for i in np.arange(0, W_grid * L_grid): # create evenly spaces variables
+
+    # Select a random number
+    index = np.random.randint(0, n_train)
+    # read and display an image with the selected index
+    axes[i].imshow( train[index,1:].reshape((28,28)) )
+    label_index = int(train[index,0])
+    axes[i].set_title(class_names[label_index], fontsize=8)
+    axes[i].axis('off')
+
+plt.subplots_adjust(hspace=0.4)
+
+
+
+
+
+# Prepare the training and testing dataset
+X_train = train[:, 1:] / 255
+y_train = train[:, 0]
+
+X_test = test[:, 1:] / 255
+y_test = test[:,0]
+
+
+
+
+
+plt.figure(figsize=(10, 10))
+for i in range(25):
+    plt.subplot(5, 5, i + 1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(X_train[i].reshape((28,28)), cmap=plt.cm.binary)
+    label_index = int(y_train[i])
+    plt.title(class_names[label_index])
+plt.show()
+plt.tight_layout()
+
+
+
+
+plt.figure(figsize=(12, 8))
+
+plt.subplot(2, 2, 1)
+classes, counts = np.unique(y_train, return_counts=True)
+plt.barh(class_names, counts)
+plt.title('Class distribution in training set')
+
+plt.subplot(2, 2, 2)
+classes, counts = np.unique(y_test, return_counts=True)
+plt.barh(class_names, counts)
+plt.title('Class distribution in testing set')
+
+
+
+
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_validate, y_train, y_validate = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+
+
+
+
+
+print(X_train.shape)
+print(y_train.shape)
+
+
+
+# * unpack the tuple
+X_train = X_train.reshape(X_train.shape[0], * (28, 28, 1))
+X_test = X_test.reshape(X_test.shape[0], * (28, 28, 1))
+X_validate = X_validate.reshape(X_validate.shape[0], * (28, 28, 1))
+
+
+
+
+
+
+print(X_train.shape)
+print(y_train.shape)
+print(X_validate.shape)
+print(y_validate.shape)
+
+
+
+
+
+import keras
+import tensorflow as tf
+
+
+
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropout, BatchNormalization
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import TensorBoard
+
+
+
+
+cnn_model = Sequential()
+
+# Try 32 fliters first then 64
+cnn_model.add(Conv2D(filters=32, kernel_size=(3, 3), input_shape=(28,28,1), activation='relu', padding='same'))
+cnn_model.add(BatchNormalization())
+cnn_model.add(Conv2D(filters=32, kernel_size=(3, 3), input_shape=(28,28,1), activation='relu', padding='same'))
+cnn_model.add(BatchNormalization())
+cnn_model.add(MaxPooling2D(pool_size=(2, 2)))
+cnn_model.add(Dropout(0.2))
+
+cnn_model.add(Conv2D(filters=64, kernel_size=(3, 3), input_shape=(28,28,1), activation='relu', padding='same'))
+cnn_model.add(BatchNormalization())
+cnn_model.add(Conv2D(filters=64, kernel_size=(3, 3), input_shape=(28,28,1), activation='relu', padding='same'))
+cnn_model.add(BatchNormalization())
+cnn_model.add(MaxPooling2D(pool_size=(2, 2)))
+cnn_model.add(Dropout(0.2))
+
+cnn_model.add(Flatten())
+cnn_model.add(Dense(units=128, activation='relu'))
+cnn_model.add(Dropout(0.2))
+cnn_model.add(Dense(units=10, activation='softmax'))
+
+
+
+
+
+METRICS = [
+    'accuracy',
+    tf.keras.metrics.Precision(name='precision'),
+    tf.keras.metrics.Recall(name='recall')
+]
+
+cnn_model.compile(loss ='sparse_categorical_crossentropy', optimizer='adam' ,metrics=['accuracy'])
+
+
+
+
+
+
+epochs = 50
+batch_size = 512
+
+history = cnn_model.fit(
+    X_train, y_train,
+    batch_size=batch_size,
+    epochs=epochs,
+    verbose=1,
+    validation_data=(X_validate, y_validate)
+)
+
+
+
+
+
+plt.figure(figsize=(12, 8))
+
+plt.subplot(2, 2, 1)
+plt.plot(history.history['loss'], label='Loss')
+plt.plot(history.history['val_loss'], label='val_Loss')
+plt.legend()
+plt.title('Loss evolution')
+
+plt.subplot(2, 2, 2)
+plt.plot(history.history['accuracy'], label='accuracy')
+plt.plot(history.history['val_accuracy'], label='val_accuracy')
+plt.legend()
+plt.title('Accuracy evolution')
+
+
+
+
+
+evaluation = cnn_model.evaluate(X_test, y_test)
+print(f'Test Accuracy : {evaluation[1]:.3f}')
